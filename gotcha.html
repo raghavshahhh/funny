@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>😂 Loading Your Unlimited Jokes...</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
+        video { position: fixed; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
+        /* Loading overlay — shown briefly before chaos */
+        #loading {
+            position: fixed; inset: 0; z-index: 10;
+            background: #0a0a0f;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            color: #fff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            transition: opacity 0.6s;
+        }
+        #loading .spinner {
+            width: 48px; height: 48px; border: 3px solid rgba(124,58,237,0.2);
+            border-top-color: #7c3aed; border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-bottom: 20px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        #loading p { font-size: 16px; color: #a1a1aa; }
+        #loading.fade-out { opacity: 0; pointer-events: none; }
+    </style>
+</head>
+<body>
+    <!-- Loading screen -->
+    <div id="loading">
+        <div class="spinner"></div>
+        <p>Generating AI-powered jokes for you...</p>
+    </div>
+
+    <!-- Video element — injected by JS -->
+    <div id="videoContainer"></div>
+
+    <script>
+        (function() {
+            // ⚠️ WARNING: This is a prank page. Close this tab to escape.
+
+            // === CONFIG ===
+            // Replace this with your actual video URL
+            const VIDEO_URL = 'https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4';
+
+            // === DOM REFS ===
+            const loading = document.getElementById('loading');
+            const container = document.getElementById('videoContainer');
+
+            // === CREATE VIDEO ===
+            const video = document.createElement('video');
+            video.src = VIDEO_URL;
+            video.autoplay = true;
+            video.loop = true;
+            video.muted = false;
+            video.playsInline = false;
+            video.controls = false;
+            video.disablePictureInPicture = true;
+            video.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;object-fit:cover;z-index:1;';
+
+            // === VOLUME LOCK: Force max volume, no escape ===
+            video.volume = 1.0;
+            video.addEventListener('volumechange', () => {
+                if (video.volume < 1.0) {
+                    video.volume = 1.0;
+                }
+            });
+
+            // === PREVENT PAUSE ===
+            video.addEventListener('pause', () => {
+                video.play().catch(() => {});
+            });
+
+            // === PREVENT SEEKING (skip) ===
+            video.addEventListener('seeking', () => {
+                if (!video.paused) {
+                    video.currentTime = video.duration - 0.1;
+                }
+            });
+
+            // === KEEP SCREEN AWAKE (WakeLock API) ===
+            let wakeLock = null;
+            async function requestWakeLock() {
+                try {
+                    if ('wakeLock' in navigator) {
+                        wakeLock = await navigator.wakeLock.request('screen');
+                        wakeLock.addEventListener('release', () => {
+                            // Re-request immediately if released
+                            requestWakeLock();
+                        });
+                    }
+                } catch (e) {
+                    // WakeLock not supported or denied — fallback: keep video playing
+                    console.log('WakeLock unavailable, using video keep-alive');
+                }
+            }
+            requestWakeLock();
+
+            // === RE-REQUEST WAKELOCK ON VISIBILITY CHANGE ===
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible' && wakeLock === null) {
+                    requestWakeLock();
+                }
+            });
+
+            // === ANNOYING BEFOREUNLOAD NAG ===
+            window.addEventListener('beforeunload', (e) => {
+                e.preventDefault();
+                e.returnValue = 'Are you sure you want to stop laughing? Your jokes are still loading! 😢';
+                return e.returnValue;
+            });
+
+            // === BLOCK KEYBOARD SHORTCUTS ===
+            document.addEventListener('keydown', (e) => {
+                // Block: Escape, Ctrl+W, Ctrl+F4, Alt+F4, Ctrl+Tab
+                const blocked = [
+                    'Escape',
+                    { key: 'w', ctrlKey: true },
+                    { key: 'W', ctrlKey: true },
+                    { key: 'F4', altKey: true },
+                ];
+                const shouldBlock = blocked.some(b => {
+                    if (typeof b === 'string') return e.key === b;
+                    return e.key === b.key &&
+                        (b.ctrlKey === undefined || e.ctrlKey === b.ctrlKey) &&
+                        (b.altKey === undefined || e.altKey === b.altKey);
+                });
+                if (shouldBlock) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+            });
+
+            // === PREVENT RIGHT-CLICK ===
+            document.addEventListener('contextmenu', (e) => e.preventDefault());
+
+            // === AUTO FULLSCREEN ===
+            function goFullscreen() {
+                const el = document.documentElement;
+                (el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen)
+                    .call(el).catch(() => {});
+            }
+
+            // === START THE CHAOS ===
+            function startChaos() {
+                container.appendChild(video);
+                loading.classList.add('fade-out');
+
+                // Start playback
+                const playPromise = video.play();
+                if (playPromise !== undefined) {
+                    playPromise.then(() => {
+                        goFullscreen();
+                        // Keep trying fullscreen every 2 seconds
+                        setInterval(goFullscreen, 2000);
+                    }).catch(() => {
+                        // Autoplay blocked — show click prompt
+                        loading.classList.remove('fade-out');
+                        loading.querySelector('p').textContent = '🔊 Tap anywhere to unlock jokes';
+                        loading.querySelector('.spinner').style.display = 'none';
+
+                        const clickHandler = () => {
+                            document.removeEventListener('click', clickHandler);
+                            video.muted = false;
+                            video.volume = 1.0;
+                            video.play().then(() => {
+                                loading.classList.add('fade-out');
+                                goFullscreen();
+                                setInterval(goFullscreen, 2000);
+                            }).catch(() => {});
+                        };
+                        document.addEventListener('click', clickHandler);
+                    });
+                }
+
+                // Remove loading overlay after 3 seconds
+                setTimeout(() => {
+                    if (loading.parentNode) loading.remove();
+                }, 3000);
+            }
+
+            // === DELAYED START: Loading fake first ===
+            setTimeout(startChaos, 1500);
+
+            // === LOG EASTER EGG ===
+            console.log('%c😂 Gotcha! %cClose this tab to escape. %cMaybe.',
+                'font-size:40px;',
+                'font-size:16px;',
+                'font-size:12px;color:#52525b;');
+            console.log('%cP.S. There are no jokes. There was never a joke API. 💀',
+                'color:#7c3aed;font-size:14px;');
+        })();
+    </script>
+</body>
+</html>
